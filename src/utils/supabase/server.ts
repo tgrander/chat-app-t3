@@ -1,17 +1,13 @@
 import { env } from "@/env";
 import { type Database } from "@/types/supabase/database";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient as createSupabaseServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
-export function createClient() {
+export function createServerClient() {
   const cookieStore = cookies();
 
-  console.log(
-    "env.NEXT_PUBLIC_SUPABASE_URL :>> ",
-    env.NEXT_PUBLIC_SUPABASE_URL,
-  );
-
-  return createServerClient<Database>(
+  return createSupabaseServerClient<Database>(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
@@ -32,5 +28,12 @@ export function createClient() {
         },
       },
     },
+  );
+}
+
+export function createClient() {
+  return createSupabaseClient<Database>(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
 }

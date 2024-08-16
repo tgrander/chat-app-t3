@@ -1,7 +1,7 @@
 import { HydrateClient, api } from "@/trpc/server";
 
 import { LatestPost } from "@/app/_components/post";
-import { createClient } from "@/utils/supabase/server";
+import { createServerClient } from "@/utils/supabase/server";
 import Link from "next/link";
 
 export default async function Home() {
@@ -9,7 +9,7 @@ export default async function Home() {
 
   void api.post.getLatest.prefetch();
 
-  const supabase = createClient();
+  const supabase = createServerClient();
   const { data: messages } = await supabase.from("chat_messages").select();
 
   return (
