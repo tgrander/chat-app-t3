@@ -1,7 +1,12 @@
-import { RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
+import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 
-import { ChatDBSchema, type ChatDB } from "@/client/db/schema";
+import {
+  ChatDBSchema,
+  type ChatDB,
+  type Message,
+  type User,
+} from "@/client/db/schema";
 import { useSupabaseClient } from "@/context/supabase/client";
 import { useInitDatabase } from "@/hooks/db";
 
@@ -47,15 +52,21 @@ export function useDataSyncer() {
   return { isConnected, error: dbError || channelError };
 }
 
-type ServerEvent = {
-  event_name:
-    | "message_sent"
-    | "message_delivered"
-    | "message_failed"
-    | "incoming_message"
-    | "sync";
-  payload: any;
+type BroadcastPayload = {
+  type: "broadcast";
+  event: string;
+  [key: string]: any;
 };
+
+type ServerEvent =
+  | { event_name: "message_sent"; payload: { messageId: string } }
+  | { event_name: "message_delivered"; payload: { messageId: string } }
+  | { event_name: "message_failed"; payload: { messageId: string } }
+  | {
+      event_name: "message_incoming";
+      payload: { message: Message; sender: User };
+    }
+  | { event_name: "sync"; payload: any };
 
 function useRealTimeChannel(
   supabase: SupabaseClient<ChatDBSchema>,
@@ -70,9 +81,12 @@ function useRealTimeChannel(
 
     const channel = supabase
       .channel("message_event")
-      .on("broadcast", { event: "*" }, (payload) =>
-        handleServerEvent(payload as ServerEvent, db),
-      )
+      .on("broadcast", { event: "*" }, (payload) => {
+        const serverEvent = mapPayloadToServerEvent(payload);
+        if (serverEvent) {
+          handleServerEvent(serverEvent, db);
+        }
+      })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           setIsConnected(true);
@@ -112,7 +126,7 @@ async function handleServerEvent(event: ServerEvent, db: ChatDB) {
     case "message_failed":
       eventHandlers.handleMessageFailed(db, event.payload);
       break;
-    case "incoming_message":
+    case "message_incoming":
       eventHandlers.handleMessageIncoming(db, event.payload);
       break;
     case "sync":
@@ -120,7 +134,7 @@ async function handleServerEvent(event: ServerEvent, db: ChatDB) {
       break;
 
     default:
-      console.warn("Unknown event type:", event.event_name);
+      console.warn("Unknown event type:", event);
       break;
   }
 }
@@ -154,4 +168,43 @@ function getMessageServerEventHandlers() {
     handleMessageFailed,
     handleSync,
   };
+}
+
+function mapPayloadToServerEvent(
+  payload: BroadcastPayload,
+): ServerEvent | null {
+  const { eventType, new: newRecord, old: oldRecord } = payload;
+
+  switch (eventType) {
+    case "INSERT":
+      return {
+        event_name: "message_incoming",
+        payload: {
+          message: newRecord as Message,
+          sender: newRecord.sender as User, // Assuming sender info is included in the payload
+        },
+      };
+    case "UPDATE":
+      if (newRecord.status === "sent") {
+        return {
+          event_name: "message_sent",
+          payload: { messageId: newRecord.id },
+        };
+      } else if (newRecord.status === "delivered") {
+        return {
+          event_name: "message_delivered",
+          payload: { messageId: newRecord.id },
+        };
+      } else if (newRecord.status === "failed") {
+        return {
+          event_name: "message_failed",
+          payload: { messageId: newRecord.id },
+        };
+      }
+      break;
+    // Add other cases as needed
+  }
+
+  console.warn("Unknown event type:", eventType);
+  return null;
 }
