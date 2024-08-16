@@ -1,5 +1,13 @@
 import { DBSchema, IDBPDatabase, openDB } from "idb";
 
+export interface User {
+  id: string;
+  name: string;
+  avatar: string;
+  status: UserPresenceStatus;
+  lastSeen: number;
+}
+
 export const MessageStatus = {
   Sending: "sending",
   Sent: "sent",
@@ -41,21 +49,26 @@ export interface Conversation {
   lastReadTimestamp: { [userId: string]: number };
 }
 
-export type MessageType = "text" | "image" | "file" | "audio" | "video";
-
-export interface MessageMetadata {
-  fileName?: string;
-  fileSize?: number;
-  duration?: number; // for audio/video
-  dimensions?: { width: number; height: number }; // for images/videos
-}
-
 export interface Reaction {
   id: string;
   messageId: string;
   userId: string;
   timestamp: string;
   reaction: MessageReactionOption;
+}
+
+export type MessageType = "text" | "image" | "file" | "audio" | "video";
+
+export interface MessageContent {
+  text?: string;
+  url?: string;
+  metadata?: {
+    fileName?: string;
+    fileSize?: number;
+    mimeType?: string;
+    duration?: number; // for audio/video
+    dimensions?: { width: number; height: number }; // for images/videos
+  };
 }
 
 export interface Message {
@@ -65,25 +78,17 @@ export interface Message {
   timestamp: number;
   type: MessageType;
   status: MessageStatus;
-  content: string | { url: string; metadata: MessageMetadata };
+  content: MessageContent;
   reactions: { [userId: string]: Reaction };
   parentMessageId?: string;
   localId?: string; // used for optimistic updates - local tracking before server confirmation
   version: number;
 }
 
-export interface User {
-  id: string;
-  name: string;
-  avatar: string;
-  status: UserPresenceStatus;
-  lastSeen: number;
-}
-
 export interface DraftMessage {
   conversationId: string;
   userId: string;
-  content: string;
+  content: MessageContent;
   timestamp: number;
 }
 
