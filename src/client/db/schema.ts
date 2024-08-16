@@ -3,9 +3,10 @@ import { DBSchema, IDBPDatabase, openDB } from "idb";
 export interface User {
   id: string;
   name: string;
-  avatar: string;
+  avatar: string | null;
   status: UserPresenceStatus;
-  lastSeen: number;
+  lastSeen: number; // Timestamp
+  createdAt: number; // Timestamp
 }
 
 export const MessageStatus = {
@@ -18,111 +19,100 @@ export const MessageStatus = {
 
 export type MessageStatus = (typeof MessageStatus)[keyof typeof MessageStatus];
 
-export const MessageReactionOption = {
-  Like: { id: "like", emoji: "👍🏽", label: "Like" },
-  Love: { id: "love", emoji: "♥️", label: "Love" },
-  Angry: { id: "angry", emoji: "😡", label: "Angry" },
-  Laugh: { id: "laugh", emoji: "😂", label: "Laugh" },
-  Sad: { id: "sad", emoji: "😢", label: "Sad" },
+export const MessageType = {
+  Text: "text",
+  Image: "image",
+  File: "file",
+  Audio: "audio",
+  Video: "video",
 } as const;
 
-export type MessageReactionOption =
-  (typeof MessageReactionOption)[keyof typeof MessageReactionOption];
+export type MessageType = (typeof MessageType)[keyof typeof MessageType];
 
 export const UserPresenceStatus = {
-  Online: { id: "online", color: "green", label: "Online" },
-  Offline: { id: "offline", color: "gray", label: "Offline" },
-  Away: { id: "away", color: "yellow", label: "Away" },
+  Online: "online",
+  Offline: "offline",
+  Away: "away",
 } as const;
 
-export type UserPresenceStatus =
-  (typeof UserPresenceStatus)[keyof typeof UserPresenceStatus];
+export type UserPresenceStatus = (typeof UserPresenceStatus)[keyof typeof UserPresenceStatus];
 
 export interface Conversation {
   id: string;
-  participants: string[];
-  lastMessageTimestamp: number;
-  name?: string;
-  avatar?: string;
-  createdAt: number;
-  updatedAt: number;
-  lastReadTimestamp: { [userId: string]: number };
+  name: string | null;
+  avatar: string | null;
+  lastMessageTimestamp: number; // Timestamp
+  createdAt: number; // Timestamp
+  updatedAt: number; // Timestamp
 }
 
-export interface Reaction {
-  id: string;
-  messageId: string;
+export interface ConversationParticipant {
+  conversationId: string;
   userId: string;
-  timestamp: string;
-  reaction: MessageReactionOption;
-}
-
-export type MessageType = "text" | "image" | "file" | "audio" | "video";
-
-export interface MessageContent {
-  text?: string;
-  url?: string;
-  metadata?: {
-    fileName?: string;
-    fileSize?: number;
-    mimeType?: string;
-    duration?: number; // for audio/video
-    dimensions?: { width: number; height: number }; // for images/videos
-  };
+  lastReadTimestamp: number; // Timestamp
 }
 
 export interface Message {
   id: string;
   conversationId: string;
   senderId: string;
-  timestamp: number;
+  parentMessageId: string | null;
   type: MessageType;
   status: MessageStatus;
-  content: MessageContent;
-  reactions: { [userId: string]: Reaction };
-  parentMessageId?: string;
-  localId?: string; // used for optimistic updates - local tracking before server confirmation
+  timestamp: number; // Timestamp
   version: number;
 }
 
-export interface DraftMessage {
-  conversationId: string;
-  userId: string;
-  content: MessageContent;
-  timestamp: number;
+export interface TextMessage {
+  messageId: string;
+  content: string;
 }
 
-export interface SendMessageRequest {
-  id: string;
+export interface MediaMessage {
   messageId: string;
-  status: "pending" | "in_flight" | "fail" | "success";
-  failCount: number;
-  timestamp: number;
-}
-
-export interface Attachment {
-  id: string;
-  messageId: string;
-  type: "image" | "file" | "audio" | "video";
   url: string;
-  thumbnailUrl?: string;
+  thumbnailUrl: string | null;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  duration: number | null; // in seconds
+  width: number | null;
+  height: number | null;
+}
+
+export interface FileMessage {
+  messageId: string;
+  url: string;
   fileName: string;
   fileSize: number;
   mimeType: string;
 }
 
+export interface Reaction {
+  id: string;
+  messageId: string;
+  userId: string;
+  reaction: string;
+  timestamp: number; // Timestamp
+}
+
 export interface ChatDBSchema extends DBSchema {
-  users: {
+  chat_users: {
     key: string;
     value: User;
     indexes: { lastSeen: number };
   };
-  conversations: {
+  chat_conversations: {
     key: string;
     value: Conversation;
-    indexes: { lastMessageTimeStamp: number };
+    indexes: { lastMessageTimestamp: number };
   };
-  messages: {
+  chat_conversation_participants: {
+    key: [string, string]; // [conversationId, userId]
+    value: ConversationParticipant;
+    indexes: { userId: string };
+  };
+  chat_messages: {
     key: string;
     value: Message;
     indexes: {
@@ -131,27 +121,24 @@ export interface ChatDBSchema extends DBSchema {
       timestamp: number;
       type: string;
       parentMessageId: string;
-      conversationTimestamp: [string, number]; // compount index
     };
   };
-  reactions: {
+  chat_text_messages: {
+    key: string; // messageId
+    value: TextMessage;
+  };
+  chat_media_messages: {
+    key: string; // messageId
+    value: MediaMessage;
+  };
+  chat_file_messages: {
+    key: string; // messageId
+    value: FileMessage;
+  };
+  chat_reactions: {
     key: string;
     value: Reaction;
     indexes: { messageId: string; userId: string };
-  };
-  attachments: {
-    key: string;
-    value: Attachment;
-    indexes: { messageId: string };
-  };
-  draftMessages: {
-    key: [string, string]; // conversation, userId
-    value: DraftMessage;
-  };
-  sendMessageRequests: {
-    key: string;
-    value: SendMessageRequest;
-    indexes: { status: string; timestamp: number };
   };
 }
 
@@ -162,55 +149,38 @@ async function openDatabase(): Promise<IDBPDatabase<ChatDBSchema>> {
   return openDB<ChatDBSchema>(DB_NAME, DB_VERSION, {
     upgrade(db) {
       // Users store
-      const userStore = db.createObjectStore("users", { keyPath: "id" });
+      const userStore = db.createObjectStore("chat_users", { keyPath: "id" });
       userStore.createIndex("lastSeen", "lastSeen");
 
       // Conversations store
-      const conversationStore = db.createObjectStore("conversations", {
-        keyPath: "id",
-      });
-      conversationStore.createIndex(
-        "lastMessageTimeStamp",
-        "lastMessageTimeStamp",
-      );
+      const conversationStore = db.createObjectStore("chat_conversations", { keyPath: "id" });
+      conversationStore.createIndex("lastMessageTimestamp", "lastMessageTimestamp");
+
+      // Conversation participants store
+      const participantStore = db.createObjectStore("chat_conversation_participants", { keyPath: ["conversationId", "userId"] });
+      participantStore.createIndex("userId", "userId");
 
       // Messages store
-      const messageStore = db.createObjectStore("messages", { keyPath: "id" });
+      const messageStore = db.createObjectStore("chat_messages", { keyPath: "id" });
       messageStore.createIndex("conversationId", "conversationId");
-      messageStore.createIndex("parentMessageId", "parentMessageId");
       messageStore.createIndex("senderId", "senderId");
       messageStore.createIndex("timestamp", "timestamp");
       messageStore.createIndex("type", "type");
-      messageStore.createIndex(
-        "conversationTimestamp",
-        "conversationTimestamp",
-      );
+      messageStore.createIndex("parentMessageId", "parentMessageId");
+
+      // Text messages store
+      db.createObjectStore("chat_text_messages", { keyPath: "messageId" });
+
+      // Media messages store
+      db.createObjectStore("chat_media_messages", { keyPath: "messageId" });
+
+      // File messages store
+      db.createObjectStore("chat_file_messages", { keyPath: "messageId" });
 
       // Reactions store
-      const reactionStore = db.createObjectStore("reactions", {
-        keyPath: "id",
-      });
+      const reactionStore = db.createObjectStore("chat_reactions", { keyPath: "id" });
       reactionStore.createIndex("messageId", "messageId");
       reactionStore.createIndex("userId", "userId");
-
-      // Attachments store
-      const attachmentStore = db.createObjectStore("attachments", {
-        keyPath: "id",
-      });
-      attachmentStore.createIndex("messageId", "messageId");
-
-      // Draft messages store
-      db.createObjectStore("draftMessages", {
-        keyPath: ["conversationId", "userId"],
-      });
-
-      // Send message requests store
-      const sendMessageRequestStore = db.createObjectStore(
-        "sendMessageRequests",
-        { keyPath: "id" },
-      );
-      sendMessageRequestStore.createIndex("status", "status");
-      sendMessageRequestStore.createIndex("timestamp", "timestamp");
     },
   });
 }
