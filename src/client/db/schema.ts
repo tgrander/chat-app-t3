@@ -221,4 +221,4 @@ export async function initDatabase() {
   }
 }
 
-export type DB = IDBPDatabase<ChatDBSchema>;
+export type ChatDB = IDBPDatabase<ChatDBSchema>;
