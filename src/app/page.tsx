@@ -1,12 +1,17 @@
-import Link from "next/link";
+import { HydrateClient, api } from "@/trpc/server";
 
 import { LatestPost } from "@/app/_components/post";
-import { api, HydrateClient } from "@/trpc/server";
+import { createClient } from "@/utils/supabase/server";
+import Link from "next/link";
 
 export default async function Home() {
   const hello = await api.post.hello({ text: "from tRPC" });
 
   void api.post.getLatest.prefetch();
+
+  const supabase = createClient();
+  const { data: messages } = await supabase.from("chat_messages").select();
+  console.log("messages :>> ", messages);
 
   return (
     <HydrateClient>
