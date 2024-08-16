@@ -26,6 +26,7 @@ export function createServerClient() {
           }
         },
       },
+      global: {},
       realtime: {
         params: {
           eventsPerSecond: 10,
