@@ -1,9 +1,9 @@
-import { type ChatDB } from "@/client/db/schema";
-import { useInitDatabase } from "@/hooks/db";
-import { createClient } from "@/utils/supabase/client";
 import { RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
-import { type DBSchema } from "idb";
 import { useEffect, useRef, useState } from "react";
+
+import { ChatDBSchema, type ChatDB } from "@/client/db/schema";
+import { useSupabaseClient } from "@/context/supabase/client";
+import { useInitDatabase } from "@/hooks/db";
 
 /**
  * Initializes the DB and Websocket connection
@@ -31,56 +31,20 @@ import { useEffect, useRef, useState } from "react";
  */
 
 export function useDataSyncer() {
+  const supabase = useSupabaseClient();
   const { db, error: dbError } = useInitDatabase();
-  const { supabase, error: supabaseError } = useCreateSupaBaseClient();
-  const { isConnected, channelRef, createRealTimeChannel } =
-    useRealTimeChannel(db);
+  const {
+    isConnected,
+    channelRef,
+    error: channelError,
+  } = useRealTimeChannel(supabase, db);
 
   console.log("db :>> ", db);
   console.log("supabase :>> ", supabase);
   console.log("isConnected :>> ", isConnected);
   console.log("channelRef :>> ", channelRef);
-  console.log("createRealTimeChannel :>> ", createRealTimeChannel);
 
-  useEffect(() => {
-    if (dbError) {
-      throw new Error(`Unable to init DB. Cancelling creation of Data Syncer`);
-    }
-    if (supabaseError) {
-      throw new Error(`Error creating Supabase client: `, supabaseError);
-    }
-
-    let isMounted = true;
-
-    if (supabase !== null) {
-      createRealTimeChannel(supabase, { isMounted });
-    }
-
-    // Clean Up
-    return () => {
-      isMounted = false;
-      if (channelRef.current) channelRef.current.unsubscribe();
-    };
-  }, [db, dbError, supabase, isConnected, channelRef, createRealTimeChannel]);
-}
-
-function useCreateSupaBaseClient() {
-  const supabaseRef = useRef<SupabaseClient<DBSchema> | null>(null);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    try {
-      const supabase = createClient();
-      supabaseRef.current = supabase;
-    } catch (error) {
-      setError(error as Error);
-    }
-  }, [supabaseRef]);
-
-  return {
-    supabase: supabaseRef.current,
-    error,
-  };
+  return { isConnected, error: dbError || channelError };
 }
 
 type ServerEvent = {
@@ -93,71 +57,72 @@ type ServerEvent = {
   payload: any;
 };
 
-function useRealTimeChannel(db: ChatDB | null) {
+function useRealTimeChannel(
+  supabase: SupabaseClient<ChatDBSchema>,
+  db: ChatDB | null,
+) {
   const [isConnected, setIsConnected] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
-  // Create Real Time Supabase Channel
-  function createRealTimeChannel(
-    client: SupabaseClient<DBSchema>,
-    { isMounted }: { isMounted: boolean },
-  ) {
-    if (client) {
-      const channel = client
-        .channel("message_event")
-        .on(
-          "broadcast",
-          { event: "*" },
-          (payload) => console.log("broadcast event: payload :>> ", payload),
-          // handleServerInsertEvent(payload. as ServerEvent)
-        )
-        .subscribe((status) => {
-          if (status === "SUBSCRIBED") {
-            if (isMounted) {
-              setIsConnected(true);
-              console.log("Connected to Supabase real-time channel");
-            }
-          }
-        });
-
-      channelRef.current = channel;
-    }
-  }
-
-  // Handle server event
-  async function handleServerInsertEvent(event: ServerEvent) {
+  useEffect(() => {
     if (!db) return;
 
-    const eventHandlers = getMessageServerEventHandlers();
+    const channel = supabase
+      .channel("message_event")
+      .on("broadcast", { event: "*" }, (payload) =>
+        handleServerEvent(payload as ServerEvent, db),
+      )
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setIsConnected(true);
+          console.log("Connected to Supabase real-time message channel.");
+        } else if (status === "CLOSED") {
+          setIsConnected(false);
+          setError(new Error("Channel closed unexpectedly."));
+        }
+      });
 
-    switch (event.event_name) {
-      case "message_sent":
-        eventHandlers.handleMessageSent(db, event.payload);
-        break;
-      case "message_delivered":
-        eventHandlers.handleMessageDelivered(db, event.payload);
-        break;
-      case "message_failed":
-        eventHandlers.handleMessageFailed(db, event.payload);
-        break;
-      case "incoming_message":
-        eventHandlers.handleMessageIncoming(db, event.payload);
-        break;
-      case "sync":
-        eventHandlers.handleSync(db, event.payload);
-        break;
+    channelRef.current = channel;
 
-      default:
-        console.warn("Unknown event type:", event.event_name);
-        break;
-    }
-  }
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [db, supabase]);
 
   return {
     isConnected,
     channelRef,
-    createRealTimeChannel,
+    error,
   };
+}
+
+async function handleServerEvent(event: ServerEvent, db: ChatDB) {
+  if (!db) return;
+
+  const eventHandlers = getMessageServerEventHandlers();
+
+  switch (event.event_name) {
+    case "message_sent":
+      eventHandlers.handleMessageSent(db, event.payload);
+      break;
+    case "message_delivered":
+      eventHandlers.handleMessageDelivered(db, event.payload);
+      break;
+    case "message_failed":
+      eventHandlers.handleMessageFailed(db, event.payload);
+      break;
+    case "incoming_message":
+      eventHandlers.handleMessageIncoming(db, event.payload);
+      break;
+    case "sync":
+      eventHandlers.handleSync(db, event.payload);
+      break;
+
+    default:
+      console.warn("Unknown event type:", event.event_name);
+      break;
+  }
 }
 
 function getMessageServerEventHandlers() {
