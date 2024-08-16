@@ -11,7 +11,6 @@ export default async function Home() {
 
   const supabase = createClient();
   const { data: messages } = await supabase.from("chat_messages").select();
-  console.log("messages :>> ", messages);
 
   return (
     <HydrateClient>
