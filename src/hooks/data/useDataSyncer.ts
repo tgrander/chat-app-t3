@@ -1,6 +1,6 @@
 import { type ChatDB } from "@/client/db/schema";
 import { useInitDatabase } from "@/hooks/db";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/client";
 import { RealtimeChannel, type SupabaseClient } from "@supabase/supabase-js";
 import { type DBSchema } from "idb";
 import { useEffect, useRef, useState } from "react";
@@ -35,6 +35,12 @@ export function useDataSyncer() {
   const { supabase, error: supabaseError } = useCreateSupaBaseClient();
   const { isConnected, channelRef, createRealTimeChannel } =
     useRealTimeChannel(db);
+
+  console.log("db :>> ", db);
+  console.log("supabase :>> ", supabase);
+  console.log("isConnected :>> ", isConnected);
+  console.log("channelRef :>> ", channelRef);
+  console.log("createRealTimeChannel :>> ", createRealTimeChannel);
 
   useEffect(() => {
     if (dbError) {
