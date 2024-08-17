@@ -1,4 +1,4 @@
-import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
+import type { RealtimeChannel, RealtimePostgresChangesPayload, SupabaseClient } from "@supabase/supabase-js";
 import { useEffect, useRef, useState } from "react";
 
 import {
@@ -40,15 +40,14 @@ export function useDataSyncer() {
   const { db, error: dbError } = useInitDatabase();
   const {
     isConnected,
-    channelRef,
     error: channelError,
   } = useRealTimeChannel(supabase, db);
 
   return { isConnected, error: dbError || channelError };
 }
 
-type BroadcastPayload = {
-  type: "broadcast";
+type PostgresChangePayload = {
+  type: "postgres_changes";
   event: string;
   [key: string]: any;
 };
@@ -76,7 +75,7 @@ function useRealTimeChannel(
 
     const channel = supabase
       .channel("message_event")
-      .on("broadcast", { event: "*" }, (payload) => {
+      .on("postgres_changes", { event: "*", schema: 'public' }, (payload) => {
         const serverEvent = mapPayloadToServerEvent(payload);
         if (serverEvent) {
           handleServerEvent(serverEvent, db);
@@ -85,7 +84,7 @@ function useRealTimeChannel(
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
           setIsConnected(true);
-          console.log("Connected to Supabase real-time message channel.");
+          console.log("Connected to Supabase real-time message channel");
         } else if (status === "CLOSED") {
           setIsConnected(false);
           setError(new Error("Channel closed unexpectedly."));
@@ -166,16 +165,19 @@ function getMessageServerEventHandlers() {
 }
 
 function mapPayloadToServerEvent(
-  payload: BroadcastPayload,
+  payload: RealtimePostgresChangesPayload<PostgresChangePayload>,
 ): ServerEvent | null {
   const { eventType, new: newRecord, old: oldRecord } = payload;
+
+  console.log("mapPayloadToServerEvent")
+  console.log('payload :>> ', payload);
 
   switch (eventType) {
     case "INSERT":
       return {
         event_name: "message_incoming",
         payload: {
-          message: newRecord as Message,
+          message: newRecord,
           sender: newRecord.sender as User, // Assuming sender info is included in the payload
         },
       };

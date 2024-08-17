@@ -14,8 +14,17 @@ export function createClient() {
         },
         heartbeatIntervalMs: 5000,
         reconnectAfterMs: (tries: number) => Math.min(tries * 1000, 5000),
-        logger: (msg: string) => console.log(msg),
-      },
+        // Enhanced logging filter
+        logger: (msg: string) => {
+          if (
+            (msg.includes('ERROR') || msg.includes('WARN')) &&
+            !msg.includes('push') &&
+            !msg.includes('receive')
+          ) {
+            console.log(msg);
+          }
+        },
+      }
     },
   );
 }

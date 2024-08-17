@@ -1,5 +1,6 @@
 import { HydrateClient, api } from "@/trpc/server";
 
+import { sendMessage } from "@/app/_actions/send-message";
 import { LatestPost } from "@/app/_components/post";
 import { createServerClient } from "@/utils/supabase/server";
 import Link from "next/link";
@@ -10,7 +11,7 @@ export default async function Home() {
   void api.post.getLatest.prefetch();
 
   const supabase = createServerClient();
-  const { data: messages } = await supabase.from("chat_messages").select();
+  const { data: messages } = await supabase.from("messages").select();
 
   return (
     <HydrateClient>
@@ -48,6 +49,10 @@ export default async function Home() {
               {hello ? hello.greeting : "Loading tRPC query..."}
             </p>
           </div>
+
+          <form action={sendMessage}>
+            <button type="submit">Send Message</button>
+          </form>
 
           <LatestPost />
         </div>

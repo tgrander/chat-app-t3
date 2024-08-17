@@ -26,15 +26,6 @@ export function createServerClient() {
           }
         },
       },
-      global: {},
-      realtime: {
-        params: {
-          eventsPerSecond: 10,
-        },
-        heartbeatIntervalMs: 5000,
-        reconnectAfterMs: (tries: number) => Math.min(tries * 1000, 5000),
-        logger: (msg: string) => console.log(msg),
-      },
     },
   );
 }

@@ -6,9 +6,9 @@ import type { Database } from "@/types/supabase/database";
 import { createServerClient } from "@/utils/supabase/server";
 import { v4 as uuidv4 } from "uuid";
 
-const conversationId = "f51406dd-65e3-43b7-a2ea-0220f90827bc";
-const aliceUserId = "fc198f84-5332-48f8-bf71-075095a659c3"
-const bobUserId = "c0c7fd49-c9b3-48ef-a8a5-e1014573d9a3"
+const conversationId = "ab3f183f-f08e-43e4-969d-628b7a29917e";
+const aliceUserId = "0310b220-d681-49ae-b55f-4ead3a79521e"
+const bobUserId = "3f2e40ea-d7e8-4711-bb5d-fbc763c71c02"
 
 // Server Action: Send Message
 export async function sendMessage() {
@@ -21,8 +21,14 @@ export async function sendMessage() {
     const {message, content} = generateTextMessageData(senderId, conversationId, {text: getRandomListItem(randomChatMessages)})
 
     try {
-        await supabase.from("messages").insert(message)
-        await supabase.from("text_messages").insert(content)
+        const { error: insertMessageError} = await supabase.from("messages").insert(message)
+        const { error: insertTextMessageError} = await supabase.from("text_messages").insert(content)
+
+        if (insertMessageError || insertTextMessageError) {
+            [insertMessageError, insertTextMessageError].forEach((error) => {
+              if (error) console.error(error)
+            })
+        }
     } catch (error) {
         throw new Error(`There was a problem inserting new message to the DB: ${error}`)
     }
