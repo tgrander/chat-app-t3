@@ -1,59 +1,96 @@
 "use server";
 
-import type { MessageContent, MessageType, User } from "@/client/db/schema";
+import { MessageStatus, MessageType } from "@/client/db/schema";
 
-import { UserPresenceStatus } from "@/client/db/schema";
+import type { Database } from "@/types/supabase/database";
 import { createServerClient } from "@/utils/supabase/server";
 import { v4 as uuidv4 } from "uuid";
 
-function generateMessageData(
-  sender: User,
-  recipient: User,
+const conversationId = "f51406dd-65e3-43b7-a2ea-0220f90827bc";
+const aliceUserId = "fc198f84-5332-48f8-bf71-075095a659c3"
+const bobUserId = "c0c7fd49-c9b3-48ef-a8a5-e1014573d9a3"
+
+// Server Action: Send Message
+export async function sendMessage() {
+    "use server"
+    
+    const supabase = createServerClient();
+
+    const senderId = fiftyFiftyChoice(aliceUserId, bobUserId)
+
+    const {message, content} = generateTextMessageData(senderId, conversationId, {text: getRandomListItem(randomChatMessages)})
+
+    try {
+        await supabase.from("messages").insert(message)
+        await supabase.from("text_messages").insert(content)
+    } catch (error) {
+        throw new Error(`There was a problem inserting new message to the DB: ${error}`)
+    }
+}
+
+/**
+ * HELPER FUNCTIONS
+ */
+function generateTextMessageData(
+  senderId: string,
   conversationId: string,
-  content: MessageContent,
-  type: MessageType = "text",
+  {text}: {text: string},
 ) {
   const now = new Date();
 
-  return {
-    id: uuidv4(),
+  const messageId = uuidv4()
+
+  const message: Database["public"]["Tables"]["messages"]["Insert"] = {
+    id: messageId,
     conversation_id: conversationId,
-    sender_id: sender.id,
-    recipient_id: recipient.id,
-    type: type,
-    content: content,
-    status: "sent",
+    sender_id: senderId,
+    type: MessageType.Text,
+    status: MessageStatus.Sent,
     timestamp: now.toISOString(),
     created_at: now.toISOString(),
     updated_at: now.toISOString(),
+    version: 1,
   };
+
+  const content: Database["public"]["Tables"]["text_messages"]["Insert"] = {
+    content: text,
+    message_id: messageId
+  }
+
+  return {
+    message,
+    content
+  }
 }
 
-// Example usage:
-const sender: User = {
-  id: "user1",
-  name: "Alice",
-  avatar: "",
-  status: UserPresenceStatus.Online,
-  lastSeen: Date.now(),
-};
-const recipient: User = {
-  id: "user2",
-  name: "Bob",
-  avatar: "",
-  status: UserPresenceStatus.Away,
-  lastSeen: Date.now(),
-};
-const conversationId = "db29e538-a930-4094-961e-c3e1e1c21001";
-
-// Text message
-const textMessage = generateMessageData(sender, recipient, conversationId, {
-  text: "Hello, how are you?",
-});
-
-// SERVER ACTIONS
-export async function sendMessage() {
-  const supabase = createServerClient();
-
-  const {} = await supabase.from("chat_messages").insert(textMessage);
+function fiftyFiftyChoice<T>(option1: T, option2: T): T {
+    return Math.random() < 0.5 ? option1 : option2;
 }
+
+function getRandomListItem<T>(list: T[]): T {
+    const randomIndex = Math.floor(Math.random() * list.length);
+    return list[randomIndex] as T;
+}
+
+const randomChatMessages = [
+    "Hey, are we still on for lunch tomorrow?",
+    "Just finished that book you recommended. It was amazing!",
+    "Can you send me the link to that funny cat video again?",
+    "Don't forget to bring your jacket, it's supposed to be cold today.",
+    "I'm running late for the meeting. Can you cover for me?",
+    "Happy birthday! 🎉🎂 Hope you have a fantastic day!",
+    "Did you see the game last night? What a comeback!",
+    "I'm at the store. Do we need milk?",
+    "Thanks for your help with the project. Couldn't have done it without you!",
+    "Movie night at my place this Saturday. You in?",
+    "I can't believe what just happened on my favorite show. No spoilers, but wow!",
+    "Hey, can I borrow your notes from yesterday's class?",
+    "Just adopted a puppy! 🐶 Want to come over and meet him?",
+    "Reminder: We have a team building event next Friday.",
+    "I found this great new coffee shop. We should check it out sometime!",
+    "Can you proofread this email for me before I send it to the boss?",
+    "I'm feeling under the weather today. Might have to call in sick.",
+    "Just booked my vacation tickets. So excited for next month!",
+    "Have you tried that new restaurant downtown? Heard it's amazing.",
+    "Don't forget to wish Mom a happy anniversary today!"
+  ];
