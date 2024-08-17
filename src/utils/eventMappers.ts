@@ -1,9 +1,9 @@
 import type { Message, User } from '@/client/db/types';
-import type { MessageChangePayload, RealtimePayload, ServerEvent, UserChangePayload } from '@/types/events';
 
+import type { ServerEvent } from '@/types/events';
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
-type Payload = RealtimePostgresChangesPayload<RealtimePayload>
+type Payload = RealtimePostgresChangesPayload<{ [key: string]: any; }>
 
 export function mapPayloadToServerEvent(payload: Payload): ServerEvent | null {
   console.log('Mapping payload to server event:', payload);
@@ -27,7 +27,6 @@ function handleInsertEvent(payload: Payload): ServerEvent | null {
       event_name: 'message_incoming',
       payload: {
         message: mapDatabaseMessageToMessage(payload.new),
-        sender: mapDatabaseUserToUser(payload.new.senderId),
       },
     };
   }
@@ -66,11 +65,11 @@ function handleDeleteEvent(payload: Payload): ServerEvent | null {
   return null;
 }
 
-function isMessagePayload(payload: Payload): payload is MessageChangePayload {
+function isMessagePayload(payload: Payload): payload is RealtimePostgresChangesPayload<Message> {
   return 'content' in payload.new;
 }
 
-function isUserPayload(payload: Payload): payload is UserChangePayload {
+function isUserPayload(payload: Payload): payload is RealtimePostgresChangesPayload<User> {
   return 'name' in payload.new;
 }
 

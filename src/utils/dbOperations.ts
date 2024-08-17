@@ -1,4 +1,4 @@
-import type { Conversation, Message, SendMessageRequest, User } from '@/client/db/types';
+import type { Message, SendMessageRequest, User } from '@/client/db/types';
 import { DB_STORE_NAMES, MAX_RETRY_ATTEMPTS } from '@/constants';
 
 import { ChatDB } from '@/client/db/schema';
@@ -18,7 +18,7 @@ export async function handleServerEvent(event: ServerEvent, db: ChatDB) {
       await handleMessageFailed(db, event.payload.messageId);
       break;
     case 'message_incoming':
-      await handleMessageIncoming(db, event.payload.message, event.payload.sender);
+      await handleMessageIncoming(db, event.payload.message);
       break;
     default:
       console.warn('Unknown event type:', event);
@@ -78,14 +78,12 @@ async function handleMessageFailed(db: ChatDB, messageId: string) {
   console.log(`Message ${messageId} marked as failed`);
 }
 
-async function handleMessageIncoming(db: ChatDB, message: Message, sender: User) {
+async function handleMessageIncoming(db: ChatDB, message: Message) {
   const tx = db.transaction([DB_STORE_NAMES.MESSAGES, DB_STORE_NAMES.USERS, DB_STORE_NAMES.CONVERSATIONS], 'readwrite');
   const messageStore = tx.objectStore(DB_STORE_NAMES.MESSAGES);
-  const userStore = tx.objectStore(DB_STORE_NAMES.USERS);
   const conversationStore = tx.objectStore(DB_STORE_NAMES.CONVERSATIONS);
 
   await messageStore.add(message);
-  await userStore.put(sender);
 
   const conversation = await conversationStore.get(message.conversationId);
   if (conversation) {
@@ -119,27 +117,6 @@ export async function addMessage(db: ChatDB, message: Message): Promise<void> {
   await tx.done;
 
   console.log(`Message ${message.id} added to local database`);
-}
-
-export async function getMessages(db: ChatDB, conversationId: string, limit: number = 50, offset: number = 0): Promise<Message[]> {
-  const tx = db.transaction(DB_STORE_NAMES.MESSAGES, 'readonly');
-  const store = tx.objectStore(DB_STORE_NAMES.MESSAGES);
-  const index = store.index('conversationId');
-
-  const messages = await index.getAll(IDBKeyRange.only(conversationId), limit, offset);
-  await tx.done;
-
-  return messages;
-}
-
-export async function getConversations(db: ChatDB): Promise<Conversation[]> {
-  const tx = db.transaction(DB_STORE_NAMES.CONVERSATIONS, 'readonly');
-  const store = tx.objectStore(DB_STORE_NAMES.CONVERSATIONS);
-
-  const conversations = await store.getAll();
-  await tx.done;
-
-  return conversations;
 }
 
 export async function getUser(db: ChatDB, userId: string): Promise<User | undefined> {

@@ -1,4 +1,4 @@
-import { Message, User } from '@/client/db/schema';
+import { Message, User } from '@/client/db/types';
 
 // Server Event Types
 export type ServerEventName = 
@@ -23,7 +23,6 @@ export type MessageFailedPayload = {
 
 export type MessageIncomingPayload = {
   message: Message;
-  sender: User;
 };
 
 export type SyncPayload = {

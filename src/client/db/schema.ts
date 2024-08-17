@@ -25,6 +25,7 @@ export interface ChatDBSchema extends DBSchema {
     key: string;
     value: Conversation;
     indexes: { lastMessageTimestamp: number };
+    byLastMessageTimestamp: number;
   };
   chat_conversation_participants: {
     key: [string, string]; // [conversationId, userId]
@@ -40,6 +41,7 @@ export interface ChatDBSchema extends DBSchema {
       timestamp: number;
       type: string;
       parentMessageId: string;
+      byConversationAndTimestamp: [string, number];
     };
   };
   chat_text_messages: {
@@ -134,6 +136,7 @@ function createMessagesStore(db: IDBPDatabase<ChatDBSchema>): void {
   store.createIndex("timestamp", "timestamp");
   store.createIndex("type", "type");
   store.createIndex("parentMessageId", "parentMessageId");
+  store.createIndex("byConversationAndTimestamp", ["conversationId", "timestamp"])
 }
 
 function createMessageContentStores(db: IDBPDatabase<ChatDBSchema>): void {
