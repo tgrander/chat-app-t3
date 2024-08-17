@@ -8,7 +8,7 @@ CREATE TYPE user_presence_status AS ENUM ('online', 'offline', 'away');
 CREATE TYPE send_message_request_status AS ENUM ('pending', 'in_flight', 'fail', 'success');
 
 -- Users table
-CREATE TABLE users (
+CREATE TABLE chat_users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
     avatar VARCHAR(255),
@@ -18,7 +18,7 @@ CREATE TABLE users (
 );
 
 -- Conversations table
-CREATE TABLE conversations (
+CREATE TABLE chat_conversations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255),
     avatar VARCHAR(255),
@@ -28,7 +28,7 @@ CREATE TABLE conversations (
 );
 
 -- Conversation participants table
-CREATE TABLE conversation_participants (
+CREATE TABLE chat_conversation_participants (
     conversation_id UUID NOT NULL,
     user_id UUID NOT NULL,
     last_read_timestamp TIMESTAMP NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE conversation_participants (
 );
 
 -- Messages table
-CREATE TABLE messages (
+CREATE TABLE chat_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     conversation_id UUID NOT NULL,
     sender_id UUID NOT NULL,
@@ -55,14 +55,14 @@ CREATE TABLE messages (
 );
 
 -- Text messages table
-CREATE TABLE text_messages (
+CREATE TABLE chat_text_messages (
     message_id UUID PRIMARY KEY,
     content TEXT NOT NULL,
     FOREIGN KEY (message_id) REFERENCES messages(id)
 );
 
 -- Media messages table
-CREATE TABLE media_messages (
+CREATE TABLE chat_media_messages (
     message_id UUID PRIMARY KEY,
     url VARCHAR(255) NOT NULL,
     thumbnail_url VARCHAR(255),
@@ -76,7 +76,7 @@ CREATE TABLE media_messages (
 );
 
 -- File messages table
-CREATE TABLE file_messages (
+CREATE TABLE chat_file_messages (
     message_id UUID PRIMARY KEY,
     url VARCHAR(255) NOT NULL,
     file_name VARCHAR(255) NOT NULL,
@@ -86,7 +86,7 @@ CREATE TABLE file_messages (
 );
 
 -- Reactions table
-CREATE TABLE reactions (
+CREATE TABLE chat_reactions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     message_id UUID NOT NULL,
     user_id UUID NOT NULL,
@@ -97,7 +97,7 @@ CREATE TABLE reactions (
 );
 
 -- Draft messages table
-CREATE TABLE draft_messages (
+CREATE TABLE chat_draft_messages (
     conversation_id UUID NOT NULL,
     user_id UUID NOT NULL,
     message_id UUID NOT NULL,
@@ -113,7 +113,7 @@ CREATE TABLE draft_messages (
 );
 
 -- Send message requests table
-CREATE TABLE send_message_requests (
+CREATE TABLE chat_send_message_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     message_id UUID NOT NULL,
     status send_message_request_status NOT NULL,

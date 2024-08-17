@@ -4,15 +4,15 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Seed Users table
 INSERT INTO users (id, name, avatar, status, last_seen, created_at)
 VALUES
-    (uuid_generate_v4(), 'Alice Johnson', 'https://example.com/avatars/alice.jpg', 'online', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (uuid_generate_v4(), 'Bob Smith', 'https://example.com/avatars/bob.jpg', 'offline', CURRENT_TIMESTAMP - INTERVAL '2 hours', CURRENT_TIMESTAMP),
-    (uuid_generate_v4(), 'Charlie Brown', 'https://example.com/avatars/charlie.jpg', 'away', CURRENT_TIMESTAMP - INTERVAL '30 minutes', CURRENT_TIMESTAMP);
+    ("0310b220-d681-49ae-b55f-4ead3a79521e", 'Alice Johnson', 'https://example.com/avatars/alice.jpg', 'online', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ("3f2e40ea-d7e8-4711-bb5d-fbc763c71c02", 'Bob Smith', 'https://example.com/avatars/bob.jpg', 'offline', CURRENT_TIMESTAMP - INTERVAL '2 hours', CURRENT_TIMESTAMP),
+    ("fc748c39-850f-4b9a-9527-adc92db12b01", 'Charlie Brown', 'https://example.com/avatars/charlie.jpg', 'away', CURRENT_TIMESTAMP - INTERVAL '30 minutes', CURRENT_TIMESTAMP);
 
 -- Seed Conversations table
 INSERT INTO conversations (id, name, avatar, last_message_timestamp, created_at, updated_at)
 VALUES
-    (uuid_generate_v4(), 'Work Group', 'https://example.com/avatars/work_group.jpg', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-    (uuid_generate_v4(), 'Family Chat', 'https://example.com/avatars/family_chat.jpg', CURRENT_TIMESTAMP - INTERVAL '1 hour', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+    ("ab3f183f-f08e-43e4-969d-628b7a29917e", 'Work Group', 'https://example.com/avatars/work_group.jpg', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ("4669569c-743f-413b-9f62-80d4a9ad1a3a", 'Family Chat', 'https://example.com/avatars/family_chat.jpg', CURRENT_TIMESTAMP - INTERVAL '1 hour', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- Seed Conversation Participants table
 INSERT INTO conversation_participants (conversation_id, user_id, last_read_timestamp)
