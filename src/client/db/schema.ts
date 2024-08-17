@@ -61,6 +61,8 @@ export interface Message {
   status: MessageStatus;
   timestamp: number; // Timestamp
   version: number;
+  createdAt: number; // timestamp
+  updatedAt: number; // timestamp
 }
 
 export interface TextMessage {
@@ -94,6 +96,18 @@ export interface Reaction {
   userId: string;
   reaction: string;
   timestamp: number; // Timestamp
+}
+
+export interface DraftMessage extends Omit<Message, "status"> {}
+
+export interface SendMessageRequest {
+  id: string;
+  messageId: string;
+  status: "pending" | "in_flight" | "fail" | "success";
+  failCount: number;
+  lastSentAt: number; // timestamp
+  createdAt: number; // timestamp
+  updatedAt: number; // timestamp
 }
 
 export interface ChatDBSchema extends DBSchema {
@@ -140,6 +154,16 @@ export interface ChatDBSchema extends DBSchema {
     value: Reaction;
     indexes: { messageId: string; userId: string };
   };
+  chat_draft_messages: {
+    key: string;
+    value: DraftMessage;
+    indexes: {updatedAt: number}
+  };
+  chat_send_message_request: {
+    key: string;
+    value: SendMessageRequest;
+    indexes: {status: string; messageId: string; lastSentAt: number}
+  }
 }
 
 const DB_NAME = "ChatAppDB";
@@ -181,6 +205,16 @@ async function openDatabase(): Promise<IDBPDatabase<ChatDBSchema>> {
       const reactionStore = db.createObjectStore("chat_reactions", { keyPath: "id" });
       reactionStore.createIndex("messageId", "messageId");
       reactionStore.createIndex("userId", "userId");
+
+      // Draft messages store
+      const draftMessagesStore = db.createObjectStore("chat_draft_messages", {keyPath: ["conversationId", "userId"]})
+      draftMessagesStore.createIndex("updatedAt", "updatedAt")
+
+      // Send message requests store
+      const sendMessageRequestStore = db.createObjectStore("chat_send_message_request", {keyPath: "id"})
+      sendMessageRequestStore.createIndex("status", "status")
+      sendMessageRequestStore.createIndex("messageId", "messageId")
+      sendMessageRequestStore.createIndex("lastSentAt", "lastSentAt")
     },
   });
 }
