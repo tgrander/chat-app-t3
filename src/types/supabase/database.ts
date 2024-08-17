@@ -4,288 +4,435 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
-      chat_attachments: {
+      conversation_participants: {
         Row: {
-          file_name: string;
-          file_size: number;
-          id: string;
-          message_id: string;
-          mime_type: string;
-          thumbnail_url: string | null;
-          type: string;
-          url: string;
-        };
+          conversation_id: string
+          last_read_timestamp: string
+          user_id: string
+        }
         Insert: {
-          file_name: string;
-          file_size: number;
-          id?: string;
-          message_id: string;
-          mime_type: string;
-          thumbnail_url?: string | null;
-          type: string;
-          url: string;
-        };
+          conversation_id: string
+          last_read_timestamp: string
+          user_id: string
+        }
         Update: {
-          file_name?: string;
-          file_size?: number;
-          id?: string;
-          message_id?: string;
-          mime_type?: string;
-          thumbnail_url?: string | null;
-          type?: string;
-          url?: string;
-        };
+          conversation_id?: string
+          last_read_timestamp?: string
+          user_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "chat_attachments_message_id_fkey";
-            columns: ["message_id"];
-            isOneToOne: false;
-            referencedRelation: "chat_messages";
-            referencedColumns: ["id"];
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
           },
-        ];
-      };
-      chat_conversation_participants: {
+          {
+            foreignKeyName: "conversation_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
         Row: {
-          conversation_id: string;
-          last_read_timestamp: string;
-          user_id: string;
-        };
+          avatar: string | null
+          created_at: string
+          id: string
+          last_message_timestamp: string
+          name: string | null
+          updated_at: string
+        }
         Insert: {
-          conversation_id: string;
-          last_read_timestamp: string;
-          user_id: string;
-        };
+          avatar?: string | null
+          created_at?: string
+          id?: string
+          last_message_timestamp: string
+          name?: string | null
+          updated_at?: string
+        }
         Update: {
-          conversation_id?: string;
-          last_read_timestamp?: string;
-          user_id?: string;
-        };
+          avatar?: string | null
+          created_at?: string
+          id?: string
+          last_message_timestamp?: string
+          name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      draft_messages: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          message_id: string
+          timestamp: string
+          type: Database["public"]["Enums"]["message_type"]
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          message_id: string
+          timestamp: string
+          type: Database["public"]["Enums"]["message_type"]
+          updated_at?: string
+          user_id: string
+          version: number
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          message_id?: string
+          timestamp?: string
+          type?: Database["public"]["Enums"]["message_type"]
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
         Relationships: [
           {
-            foreignKeyName: "chat_conversation_participants_conversation_id_fkey";
-            columns: ["conversation_id"];
-            isOneToOne: false;
-            referencedRelation: "chat_conversations";
-            referencedColumns: ["id"];
+            foreignKeyName: "draft_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "chat_conversation_participants_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "chat_users";
-            referencedColumns: ["id"];
+            foreignKeyName: "draft_messages_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
           },
-        ];
-      };
-      chat_conversations: {
+          {
+            foreignKeyName: "draft_messages_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      file_messages: {
         Row: {
-          avatar: string | null;
-          created_at: string;
-          id: string;
-          last_message_timestamp: string;
-          name: string | null;
-          updated_at: string;
-        };
+          file_name: string
+          file_size: number
+          message_id: string
+          mime_type: string
+          url: string
+        }
         Insert: {
-          avatar?: string | null;
-          created_at?: string;
-          id?: string;
-          last_message_timestamp: string;
-          name?: string | null;
-          updated_at?: string;
-        };
+          file_name: string
+          file_size: number
+          message_id: string
+          mime_type: string
+          url: string
+        }
         Update: {
-          avatar?: string | null;
-          created_at?: string;
-          id?: string;
-          last_message_timestamp?: string;
-          name?: string | null;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      chat_message_metadata: {
-        Row: {
-          duration: unknown | null;
-          file_name: string | null;
-          file_size: number | null;
-          height: number | null;
-          message_id: string;
-          width: number | null;
-        };
-        Insert: {
-          duration?: unknown | null;
-          file_name?: string | null;
-          file_size?: number | null;
-          height?: number | null;
-          message_id: string;
-          width?: number | null;
-        };
-        Update: {
-          duration?: unknown | null;
-          file_name?: string | null;
-          file_size?: number | null;
-          height?: number | null;
-          message_id?: string;
-          width?: number | null;
-        };
+          file_name?: string
+          file_size?: number
+          message_id?: string
+          mime_type?: string
+          url?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "chat_message_metadata_message_id_fkey";
-            columns: ["message_id"];
-            isOneToOne: true;
-            referencedRelation: "chat_messages";
-            referencedColumns: ["id"];
+            foreignKeyName: "file_messages_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
           },
-        ];
-      };
-      chat_messages: {
+        ]
+      }
+      media_messages: {
         Row: {
-          content: string;
-          conversation_id: string;
-          id: string;
-          parent_message_id: string | null;
-          sender_id: string;
-          status: string;
-          timestamp: string;
-          type: string;
-          version: number;
-        };
+          duration: number | null
+          file_name: string
+          file_size: number
+          height: number | null
+          message_id: string
+          mime_type: string
+          thumbnail_url: string | null
+          url: string
+          width: number | null
+        }
         Insert: {
-          content: string;
-          conversation_id: string;
-          id?: string;
-          parent_message_id?: string | null;
-          sender_id: string;
-          status: string;
-          timestamp?: string;
-          type: string;
-          version?: number;
-        };
+          duration?: number | null
+          file_name: string
+          file_size: number
+          height?: number | null
+          message_id: string
+          mime_type: string
+          thumbnail_url?: string | null
+          url: string
+          width?: number | null
+        }
         Update: {
-          content?: string;
-          conversation_id?: string;
-          id?: string;
-          parent_message_id?: string | null;
-          sender_id?: string;
-          status?: string;
-          timestamp?: string;
-          type?: string;
-          version?: number;
-        };
+          duration?: number | null
+          file_name?: string
+          file_size?: number
+          height?: number | null
+          message_id?: string
+          mime_type?: string
+          thumbnail_url?: string | null
+          url?: string
+          width?: number | null
+        }
         Relationships: [
           {
-            foreignKeyName: "chat_messages_conversation_id_fkey";
-            columns: ["conversation_id"];
-            isOneToOne: false;
-            referencedRelation: "chat_conversations";
-            referencedColumns: ["id"];
+            foreignKeyName: "media_messages_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "chat_messages_parent_message_id_fkey";
-            columns: ["parent_message_id"];
-            isOneToOne: false;
-            referencedRelation: "chat_messages";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "chat_messages_sender_id_fkey";
-            columns: ["sender_id"];
-            isOneToOne: false;
-            referencedRelation: "chat_users";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      chat_reactions: {
+        ]
+      }
+      messages: {
         Row: {
-          id: string;
-          message_id: string;
-          reaction: string;
-          timestamp: string;
-          user_id: string;
-        };
+          conversation_id: string
+          created_at: string
+          id: string
+          parent_message_id: string | null
+          sender_id: string
+          status: Database["public"]["Enums"]["message_status"]
+          timestamp: string
+          type: Database["public"]["Enums"]["message_type"]
+          updated_at: string
+          version: number
+        }
         Insert: {
-          id?: string;
-          message_id: string;
-          reaction: string;
-          timestamp?: string;
-          user_id: string;
-        };
+          conversation_id: string
+          created_at?: string
+          id?: string
+          parent_message_id?: string | null
+          sender_id: string
+          status: Database["public"]["Enums"]["message_status"]
+          timestamp: string
+          type: Database["public"]["Enums"]["message_type"]
+          updated_at?: string
+          version: number
+        }
         Update: {
-          id?: string;
-          message_id?: string;
-          reaction?: string;
-          timestamp?: string;
-          user_id?: string;
-        };
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          parent_message_id?: string | null
+          sender_id?: string
+          status?: Database["public"]["Enums"]["message_status"]
+          timestamp?: string
+          type?: Database["public"]["Enums"]["message_type"]
+          updated_at?: string
+          version?: number
+        }
         Relationships: [
           {
-            foreignKeyName: "chat_reactions_message_id_fkey";
-            columns: ["message_id"];
-            isOneToOne: false;
-            referencedRelation: "chat_messages";
-            referencedColumns: ["id"];
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "chat_reactions_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "chat_users";
-            referencedColumns: ["id"];
+            foreignKeyName: "messages_parent_message_id_fkey"
+            columns: ["parent_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
           },
-        ];
-      };
-      chat_users: {
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reactions: {
         Row: {
-          avatar: string | null;
-          created_at: string;
-          id: string;
-          last_seen: string;
-          name: string;
-          status: string;
-        };
+          id: string
+          message_id: string
+          reaction: string
+          timestamp: string
+          user_id: string
+        }
         Insert: {
-          avatar?: string | null;
-          created_at?: string;
-          id?: string;
-          last_seen: string;
-          name: string;
-          status: string;
-        };
+          id?: string
+          message_id: string
+          reaction: string
+          timestamp: string
+          user_id: string
+        }
         Update: {
-          avatar?: string | null;
-          created_at?: string;
-          id?: string;
-          last_seen?: string;
-          name?: string;
-          status?: string;
-        };
-        Relationships: [];
-      };
-    };
+          id?: string
+          message_id?: string
+          reaction?: string
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      send_message_requests: {
+        Row: {
+          created_at: string
+          fail_count: number
+          id: string
+          last_sent_at: string
+          message_id: string
+          status: Database["public"]["Enums"]["send_message_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fail_count?: number
+          id?: string
+          last_sent_at: string
+          message_id: string
+          status: Database["public"]["Enums"]["send_message_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fail_count?: number
+          id?: string
+          last_sent_at?: string
+          message_id?: string
+          status?: Database["public"]["Enums"]["send_message_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "send_message_requests_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      text_messages: {
+        Row: {
+          content: string
+          message_id: string
+        }
+        Insert: {
+          content: string
+          message_id: string
+        }
+        Update: {
+          content?: string
+          message_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "text_messages_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          avatar: string | null
+          created_at: string
+          id: string
+          last_seen: string
+          name: string
+          status: Database["public"]["Enums"]["user_presence_status"]
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string
+          id?: string
+          last_seen: string
+          name: string
+          status: Database["public"]["Enums"]["user_presence_status"]
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string
+          id?: string
+          last_seen?: string
+          name?: string
+          status?: Database["public"]["Enums"]["user_presence_status"]
+        }
+        Relationships: []
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Enums: {
-      [_ in never]: never;
-    };
+      message_status: "sending" | "sent" | "delivered" | "read" | "failed"
+      message_type: "text" | "image" | "file" | "audio" | "video"
+      send_message_request_status: "pending" | "in_flight" | "fail" | "success"
+      user_presence_status: "online" | "offline" | "away"
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
+      [_ in never]: never
+    }
+  }
+}
 
-type PublicSchema = Database[Extract<keyof Database, "public">];
+type PublicSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
   PublicTableNameOrOptions extends
@@ -298,7 +445,7 @@ export type Tables<
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
       Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R;
+      Row: infer R
     }
     ? R
     : never
@@ -306,11 +453,11 @@ export type Tables<
         PublicSchema["Views"])
     ? (PublicSchema["Tables"] &
         PublicSchema["Views"])[PublicTableNameOrOptions] extends {
-        Row: infer R;
+        Row: infer R
       }
       ? R
       : never
-    : never;
+    : never
 
 export type TablesInsert<
   PublicTableNameOrOptions extends
@@ -321,17 +468,17 @@ export type TablesInsert<
     : never = never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I;
+      Insert: infer I
     }
     ? I
     : never
   : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
     ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
-        Insert: infer I;
+        Insert: infer I
       }
       ? I
       : never
-    : never;
+    : never
 
 export type TablesUpdate<
   PublicTableNameOrOptions extends
@@ -342,17 +489,17 @@ export type TablesUpdate<
     : never = never,
 > = PublicTableNameOrOptions extends { schema: keyof Database }
   ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U;
+      Update: infer U
     }
     ? U
     : never
   : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
     ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
-        Update: infer U;
+        Update: infer U
       }
       ? U
       : never
-    : never;
+    : never
 
 export type Enums<
   PublicEnumNameOrOptions extends
@@ -365,4 +512,5 @@ export type Enums<
   ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
     ? PublicSchema["Enums"][PublicEnumNameOrOptions]
-    : never;
+    : never
+

@@ -44,11 +44,6 @@ export function useDataSyncer() {
     error: channelError,
   } = useRealTimeChannel(supabase, db);
 
-  console.log("db :>> ", db);
-  console.log("supabase :>> ", supabase);
-  console.log("isConnected :>> ", isConnected);
-  console.log("channelRef :>> ", channelRef);
-
   return { isConnected, error: dbError || channelError };
 }
 
